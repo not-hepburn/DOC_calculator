@@ -1,4 +1,7 @@
 streamlit
+numpy
+pandas
+matplotlib
+plotly
 scipy
-matplotlib>=3.0.0
-plotly.express
+numba
