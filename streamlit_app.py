@@ -242,6 +242,13 @@ def user_data():
     uploaded = st.file_uploader("Upload CSV file", type=["csv"], accept_multiple_files=False)
 
     df_csv = None
+    model = st.selectbox("Model", 
+                        ["Free electrons", "1D chain", "2D square lattice", "1D phonons"])
+
+    dim = st.selectbox("Dimension", [1,2,3]) if model == "Free electrons" else None
+
+    Nk = st.slider("Number of k-points", 1_000, 30_000_000, 50_000)
+    
     if uploaded is not None:
         try:
             df_csv = uploaded
