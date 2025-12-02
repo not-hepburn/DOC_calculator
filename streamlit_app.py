@@ -229,125 +229,109 @@ def user_data():
     from scipy.constants import hbar, m_e
     
 
-    from Calculator_DOS_lib import (
-        numerical_dos_free_particles,
+    from Calculator_DOS_lib import (dos_from_user_data, numerical_dos_free_particles,
         dos_1d_chain,
         dos_2d_square_lattice,
-        dos_1d_phonons,
-        WangLandau
-    )
-    st.write("I am not a lab team. Therefore, the file must only contain different energy values.\\" \
-        "To compute the DOS we will use the Wang and Landau algorithm\n 2D Ising model"
-            "\nSource:\n 1) https://www.physics.rutgers.edu/grad/509/Wang%20Landau.html \n 2) https://nationalmaglab.org/media/4q5govkf/landau_1.pdf")
-    uploaded = st.file_uploader("Upload CSV file", type=["csv"], accept_multiple_files=False)
+        dos_1d_phonons)
 
-    df_csv = None
-    model = st.selectbox("Model", 
-                        ["Free electrons", "1D chain", "2D square lattice", "1D phonons"])
+    st.write("""Uplaod a CSV containing **Energy** and **Intensity** (optional) columns."""
+            "lol")
+    with st.container(border=True):
+        st.subheader("Upload CSV")
+        uploaded = st.file_uploader("Chose your file", type=["csv"])
+        df_csv = None
+        headers_col = None
 
-    dim = st.selectbox("Dimension", [1,2,3]) if model == "Free electrons" else None
-
-    Nk = st.slider("Number of k-points", 1_000, 30_000_000, 50_000)
-    
-    if uploaded is not None:
+    if uploaded:
         try:
-            df_csv = uploaded
-            st.success("CSV loaded successfully!")
+            # Read only header row
+            headers = uploaded.getvalue().decode("utf-8").split("\n")[0]
+            headers_col = [h.strip() for h in headers.split(",")]
+            col_left, col_right = st.columns([0.65, 0.35], vertical_alignment='center', gap="medium", border=True)
+            with col_left:
+                st.subheader("Detected Header")
+                st.dataframe(pd.DataFrame([headers_col], columns=headers_col))
+            with col_right:
+                st.subheader("Validation")
+                confirm = st.radio(
+                    "Does this look correct?",
+                    ["Yes", "No"],
+                    horizontal=True,
+                )
 
-            st.write("Preview:")
-            st.dataframe(df_csv.head())
+            if confirm == "Yes":
+                df_csv = pd.read_csv(uploaded)
 
-            # Validate columns
-            if not {"Energy", "Intensity"}.issubset(df_csv.columns):
-                st.error("CSV must contain 'Energy' and 'Intensity' columns.")
-                df_csv = None
+                st.success("CSV loaded successfully!")
+                st.write("Preview:")
+                st.dataframe(df_csv.head(), use_container_width=True)
+
+            else:
+                st.warning("Please upload a corrected CSV file.")
+
         except Exception as e:
-            st.error(f"Error reading CSV: {e}")
+            st.error(f"Error reading file: {e}")
+        
+    st.markdown("---")        
     st.subheader("Configuration")
-
-    model = st.pills(
-        "Model",  
-        ["Free electrons", "1D chain", "2D square lattice", "1D phonons"],
-        selection_mode="single"
-    )
-
-    col_left, col_right = st.columns([0.32, 0.68])
+    col_left, col_right = st.columns([1, 0.50], gap="large", border=True)
 
     with col_left:
-        if model == "Free electrons":
-            dim = st.radio("Dimension", [1, 2, 3], horizontal=True)
-        else:
-            dim = None
+        st.subheader("DOS Resolution")
+        bins = st.pills(label="Number of bins (resolution)", options=[
+            100, 200, 300, 400, 500], selection_mode="single" )
+    if df_csv is not None:
+        with col_right:
 
-        Nk = st.slider(
-            "Flatness",
-            0, 1, 
-            0.05,
-            help="Write something after..."
-        )
-
-    with col_right:
-        Nitt = st.number_input(
-            "Number of Itteration (e8)",
-            placeholder="Enter the n-itteration...",
-            format= "int"
-        )
+            column_choice = st.selectbox(
+                "Select energy column:",
+                df_csv.columns.tolist()
+            )
+    
+            
+    E1, g1 = numerical_dos_free_particles(1, num_k_points=200_000)
+    E2, g2 = numerical_dos_free_particles(2, num_k_points=200_000)
+    E3, g3 = numerical_dos_free_particles(3, num_k_points=200_000)
 
     st.markdown("---")
 
-    model = st.selectbox("Model", 
-                        ["Free electrons", "1D chain", "2D square lattice", "1D phonons"])
+    if st.button("Compute DOS") and df_csv is not None:
+        E_exp = df_csv[column_choice].values
 
-    dim = st.selectbox("Dimension", [1,2,3]) if model == "Free electrons" else None
+        with st.spinner("Fetching the corresponding bits... be right back"):
 
-    Nk = st.slider("Number of k-points", 1_000, 30_000_000, 50_000)
+            # ---- Compute model ----
+            energies, hist = dos_from_user_data(E= E_exp, bins=bins)
+            dos = hist
+            st.caption("Density of States")
+            df_plot = pd.DataFrame({f"Energy": energies,
+                                    "DOS": dos}).sort_values("Energy")
+            st.line_chart(df_plot, x=f"Energy", y="DOS")
+            g1_interp = np.interp(E_exp, E1, g1)
+            g2_interp = np.interp(E_exp, E2, g2)
+            g3_interp = np.interp(E_exp, E3, g3)
 
+            err1 = np.mean((df_csv["Intensity"] - g1_interp)**2)
+            err2 = np.mean((df_csv["Intensity"] - g2_interp)**2)
+            err3 = np.mean((df_csv["Intensity"] - g3_interp)**2)
 
-    if st.button("Compute DOS"):
-        # ---- Compute model ----
-        if model == "Free electrons":
-            with st.spinner("Computing DOS..."):
-                E, gE = numerical_dos_free_particles(dim, num_k_points=Nk)
-                df = pd.DataFrame({"Energy": E, "DOS": gE})
+            best = np.argmin([err1, err2, err3])
+            models = ["1D Free Electrons", "2D Free Electrons", "3D Free Electrons"]
+
+            best_model = models[best]
             
-        elif model == "1D chain":
-            with st.spinner("Computing DOS..."):
-                E, gE = dos_1d_chain(Nk)
-                df = pd.DataFrame({"Energy": E, "DOS": gE})
+            st.success(f"DOS computed successfully for {len(E_exp)} energy values.\n \n Best matching model: **{best_model}**")
             
-        elif model == "2D square lattice":
-            with st.spinner("Computing DOS..."):
-                E, gE = dos_2d_square_lattice(Nk)
-                df = pd.DataFrame({"Energy": E, "DOS": gE})
-           
-        else:  # phonons
-            with st.spinner("Computing DOS..."):
-                E, gE = dos_1d_phonons(Nk)
-                df = pd.DataFrame({"Energy": E, "DOS": gE})
+            with st.container(border=True):
+                st.write("### Data summary")
+                st.metric("Entries", len(E_exp))
+                st.metric("Min Energy", f"{E_exp.min():.3f}")
+                st.metric("Max Energy", f"{E_exp.max():.3f}")
+                st.metric(f"Error on {best_model} model: ", f"{best:.2f}")
+
+            csv = df_plot.to_csv(index=False).encode("utf-8")
+            st.download_button("Download DOS CSV", csv, "DOS_output.csv", "text/csv")
         
-
-        import plotly.express as px
-        df_plot = df.copy()
-        scale = 1e-12
-        df_plot["DOS_scaled"] = df_plot["DOS"] * scale
-
-        fig = px.line(df_plot, x="Energy", y="DOS_scaled")
-        fig.update_yaxes(title=f"DOS g(E)  [×10^{int(np.log10(1/scale))}]")
-        fig.update_xaxes(title="Energy (eV)")
-        st.plotly_chart(fig, use_container_width=True)
-
-    analytical = st.checkbox("Plot analytical DOS")
-    if analytical and model == "Free electrons":
-        if dim == 1:
-            dos_anal = (1/np.pi)*np.sqrt(m_e/(2*df_plot["Energy"])) / hbar
-        elif dim == 2:
-            dos_anal = np.full_like(df_plot["Energy"], m_e/(np.pi*hbar**2))
-        elif dim == 3:
-            dos_anal = (1/(2*np.pi**2)) * (2*m_e/hbar**2)**1.5 * np.sqrt(df_plot["Energy"])
-
-        fig.add_scatter(x=df_plot["Energy"], y=dos_anal*scale, mode="lines",
-                        name="Analytical DOS", line=dict(color="red", dash="dash"))
-    pass
     
 page_names_to_funcs = {
     "Intro Page": intro,
