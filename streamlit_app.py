@@ -12,7 +12,7 @@ from Calculator_DOS_lib import (
 def intro():
     import streamlit as st
 
-    st.write("# Phys 456: Project")
+    st.write("# Phys 459: Project")
     st.sidebar.success("Select an option above.")
 
     st.markdown(

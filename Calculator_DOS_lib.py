@@ -10,14 +10,15 @@ def energy (mass, k, dimension = 1):
     if dimension not in [1, 2, 3]:
         raise ValueError("Dimension must be 1, 2, or 3.")
     k_arr = np.atleast_2d(k)
-    if k_arr.shape[0] == 1:
+
+    if k_arr.shape[1] < dimension and k_arr.shape[0] >= dimension:
         k_arr = k_arr.T
-    
+
     num_cols = k_arr.shape[1]
     k_x = k_arr[:, 0] if num_cols >= 1 else None
     k_y = k_arr[:, 1] if num_cols >= 2 else None
     k_z = k_arr[:, 2] if num_cols >= 3 else None
-    
+
     if dimension == 1:
         fermi_energy = const.hbar**2 * k_x**2/(2*mass)
         phonon_energy = const.hbar * k_x * const.speed_of_sound
@@ -25,7 +26,7 @@ def energy (mass, k, dimension = 1):
         fermi_energy = const.hbar**2 *(k_x**2 +k_y**2)/(2*mass)
         phonon_energy = const.hbar * np.sqrt(k_x**2 +k_y**2) * const.speed_of_sound
     else:
-        fermi_energy = const.hbar**2 * (k_x**2+k_y**2+k_x**2)/(2*mass)
+        fermi_energy = const.hbar**2 * (k_x**2+k_y**2+k_z**2)/(2*mass)
         phonon_energy = const.hbar * np.sqrt(k_x**2+k_y**2+k_z**2) * const.speed_of_sound
     return fermi_energy, phonon_energy
 
