@@ -258,11 +258,18 @@ def dos_from_user_data(E, bins=500, spin_degeneracy=2, return_edges=False):
     V_k = (4.0 / 3.0) * np.pi * k_max**3      # total sampled k-volume
     dk3_per_point = V_k / N_k                 # d^3k for every sampled k-point
     
-    # ------------------------------------------------------------
-    # 2. Histogram the energies
-    # ------------------------------------------------------------
-    # We use density=False → raw counts in each bin
-    hist, bin_edges = np.histogram(E, bins=bins, range=(0, None))
+
+    # Histogram the energies
+    
+    E_min = float(np.min(E))
+    E_max = float(np.max(E))
+
+    hist, bin_edges = np.histogram(E, bins=bins, range=(E_min, E_max))
+
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+    dE = np.diff(bin_edges)
+
+    hist, bin_edges = np.histogram(E, bins=bins)
     
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
     dE = np.diff(bin_edges)                    # width of each bin (can be variable)

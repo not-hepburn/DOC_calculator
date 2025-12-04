@@ -354,10 +354,7 @@ def user_data():
                         st.error("No energy column selected.")
                         st.stop()
 
-                    # Defensive cleaning
-                    E_data = pd.to_numeric(df[energy_col], errors='ignore')
-                    E_data = E_data[~np.isnan(E_data)]
-                    E_data = E_data[E_data.notnull()].values
+            
 
                     if len(E_data) == 0:
                         st.error("Energy column contains no numeric data.")
