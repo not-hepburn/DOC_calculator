@@ -227,6 +227,7 @@ def user_data():
     import numpy as np
     import pandas as pd
     from scipy.constants import hbar, m_e
+    import matplotlib.pyplot as plt
     
 
     from Calculator_DOS_lib import (dos_from_user_data, numerical_dos_free_particles,
@@ -234,104 +235,216 @@ def user_data():
         dos_2d_square_lattice,
         dos_1d_phonons)
 
-    st.write("""Uplaod a CSV containing **Energy** and **Intensity** (optional) columns."""
-            "lol")
+
+    st.set_page_config(page_title="User DOS Analyzer", layout="centered")
+    st.title("Free-Particle Density of States from Experimental/Data Points")
+
+    st.write("""
+    Upload a CSV file containing at least an **Energy** column.  
+    Optionally include an **Intensity** column if you want to compare against theoretical free-particle models (1D/2D/3D).
+    """)
+
+    # -----------------------------
+    # 1. File Upload & Validation
+    # -----------------------------
     with st.container(border=True):
-        st.subheader("Upload CSV")
-        uploaded = st.file_uploader("Chose your file", type=["csv"])
-        df_csv = None
-        headers_col = None
+        st.subheader("Upload CSV File")
+        uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
 
-    if uploaded:
+    df = None
+    energy_col = None
+    intensity_col = None
+
+    if uploaded_file is not None:
+        delimiter = st.radio(
+            "Delimiter",
+            ["comma", "semicolon", "tab", "space"],
+            horizontal=True
+        )
+        sep = {
+            "comma": ",",
+            "semicolon": ";",
+            "tab": "\t",
+            "space": " "
+        }[delimiter]
+
         try:
-            # Read only header row
-            headers = uploaded.getvalue().decode("utf-8").split("\n")[0]
-            headers_col = [h.strip() for h in headers.split(",")]
-            col_left, col_right = st.columns([0.65, 0.35], vertical_alignment='center', gap="medium", border=True)
-            with col_left:
-                st.subheader("Detected Header")
-                st.dataframe(pd.DataFrame([headers_col], columns=headers_col))
-            with col_right:
-                st.subheader("Validation")
-                confirm = st.radio(
-                    "Does this look correct?",
-                    ["Yes", "No"],
-                    horizontal=True,
-                )
+            # Preview header
+            header_df = pd.read_csv(uploaded_file, nrows=0)
+            columns = header_df.columns.tolist()
 
-            if confirm == "Yes":
-                df_csv = pd.read_csv(uploaded)
-
-                st.success("CSV loaded successfully!")
-                st.write("Preview:")
-                st.dataframe(df_csv.head(), use_container_width=True)
-
-            else:
-                st.warning("Please upload a corrected CSV file.")
+            col1, col2 = st.columns([0.6, 0.4])
+            with col1:
+                st.write("**Detected columns:**")
+                st.write(",".join(columns))
+            with col2:
+                if st.checkbox("Header looks correct", value=True):
+                    uploaded_file.seek(0)
+                    df = pd.read_csv(uploaded_file, on_bad_lines="skip")
+                    
+                    st.success(f"Loaded {len(df):,} rows with delimiter '{sep}'")
+                    st.dataframe(df.head(), use_container_width=True)
+                else:
+                    st.warning("Please fix and re-upload the file.")
+                    st.stop()
 
         except Exception as e:
             st.error(f"Error reading file: {e}")
-        
-    st.markdown("---")        
-    st.subheader("Configuration")
-    col_left, col_right = st.columns([1, 0.50], gap="large", border=True)
-
-    with col_left:
-        st.subheader("DOS Resolution")
-        bins = st.pills(label="Number of bins (resolution)", options=[
-            100, 200, 300, 400, 500], selection_mode="single" )
-    if df_csv is not None:
-        with col_right:
-
-            column_choice = st.selectbox(
-                "Select energy column:",
-                df_csv.columns.tolist()
-            )
-    
-            
-    E1, g1 = numerical_dos_free_particles(1, num_k_points=200_000)
-    E2, g2 = numerical_dos_free_particles(2, num_k_points=200_000)
-    E3, g3 = numerical_dos_free_particles(3, num_k_points=200_000)
+            st.stop()
 
     st.markdown("---")
 
-    if st.button("Compute DOS") and df_csv is not None:
-        E_exp = df_csv[column_choice].values
+    # -----------------------------
+    # 2. Configuration
+    # -----------------------------
+    if df is not None:
+        col_left, col_right = st.columns([1, 1])
 
-        with st.spinner("Fetching the corresponding bits... be right back"):
+        with col_left:
+            st.subheader("DOS Computation Settings")
+            bins = st.select_slider(
+                "Number of energy bins (resolution)",
+                options=[100, 200, 300, 400, 500, 750, 1000],
+                value=400
+            )
+            try:
+                bins = int(bins)
+            except:
+                bins = 400
 
-            # ---- Compute model ----
-            energies, hist = dos_from_user_data(E= E_exp, bins=bins)
-            dos = hist
-            st.caption("Density of States")
-            df_plot = pd.DataFrame({f"Energy": energies,
-                                    "DOS": dos}).sort_values("Energy")
-            st.line_chart(df_plot, x=f"Energy", y="DOS")
-            g1_interp = np.interp(E_exp, E1, g1)
-            g2_interp = np.interp(E_exp, E2, g2)
-            g3_interp = np.interp(E_exp, E3, g3)
+            if bins is None:
+                bins = 400
 
-            err1 = np.mean((df_csv["Intensity"] - g1_interp)**2)
-            err2 = np.mean((df_csv["Intensity"] - g2_interp)**2)
-            err3 = np.mean((df_csv["Intensity"] - g3_interp)**2)
+        with col_right:
+            st.subheader("Column Selection")
+            energy_col = st.selectbox("Select **Energy** column", df.columns)
+            intensity_col = st.selectbox(
+                "Select **Intensity** column (optional for model fitting)",
+                ["None"] + df.columns.tolist(),
+                index=0
+            )
+            if intensity_col == "None":
+                intensity_col = None
 
-            best = np.argmin([err1, err2, err3])
-            models = ["1D Free Electrons", "2D Free Electrons", "3D Free Electrons"]
-
-            best_model = models[best]
-            
-            st.success(f"DOS computed successfully for {len(E_exp)} energy values.\n \n Best matching model: **{best_model}**")
-            
-            with st.container(border=True):
-                st.write("### Data summary")
-                st.metric("Entries", len(E_exp))
-                st.metric("Min Energy", f"{E_exp.min():.3f}")
-                st.metric("Max Energy", f"{E_exp.max():.3f}")
-                st.metric(f"Error on {best_model} model: ", f"{best:.2f}")
-
-            csv = df_plot.to_csv(index=False).encode("utf-8")
-            st.download_button("Download DOS CSV", csv, "DOS_output.csv", "text/csv")
+        st.markdown("---")
+        st.write(bins)
+        # -----------------------------
+        # 3. Compute DOS Button
+        # -----------------------------
+        if st.button("Compute Density of States", type="primary"):
         
+            if df is None or energy_col is None :
+                st.error("Please upload data and select an energy column.")
+                st.stop()
+            
+            E_data = pd.to_numeric(df[energy_col], errors='coerce').dropna().values
+            
+            if len(E_data) == 0:
+                st.error("No valid numeric energy values found.")
+                st.stop()
+            
+
+            with st.spinner("Computing density of states from your data..."):
+                try:
+                    if bins is None:
+                        st.error("Internal error: bins is None")
+                        st.stop()
+
+                    if energy_col is None:
+                        st.error("No energy column selected.")
+                        st.stop()
+
+                    # Defensive cleaning
+                    E_data = pd.to_numeric(df[energy_col], errors='ignore')
+                    E_data = E_data[~np.isnan(E_data)]
+                    E_data = E_data[E_data.notnull()].values
+
+                    if len(E_data) == 0:
+                        st.error("Energy column contains no numeric data.")
+                        st.stop()
+
+                    energies, dos = dos_from_user_data(E_data, bins=bins, spin_degeneracy=2)
+                except Exception as e:
+                    st.error(f"Error computing DOS: {e}")
+                    st.stop()
+
+            # -----------------------------
+            # 4. Display Results
+            # -----------------------------
+            st.success("Density of States computed successfully!")
+
+            # Plot
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.plot(energies, dos, color="#1f77b4", lw=2)
+            ax.set_xlabel("Energy (a.u.)")
+            ax.set_ylabel("DOS (states / energy / unit cell)")
+            ax.set_title("Computed Density of States")
+            ax.grid(True, alpha=0.3)
+            st.pyplot(fig)
+
+            # Data table & download
+            result_df = pd.DataFrame({"Energy": energies, "DOS": dos})
+            st.download_button(
+                label="Download DOS as CSV",
+                data=result_df.to_csv(index=False).encode(),
+                file_name="computed_DOS.csv",
+                mime="text/csv"
+            )
+
+            # -----------------------------
+            # 5. Model Comparison (1D/2D/3D free particles)
+            # -----------------------------
+            if intensity_col is not None:
+                st.markdown("### Model Comparison (1D / 2D / 3D Free Particles)")
+
+                intensity = pd.to_numeric(df[intensity_col], errors='coerce').dropna().values
+                if len(intensity) != len(E_data):
+                    st.warning("Intensity column length doesn't match Energy → skipping model fit.")
+                else:
+                    with st.spinner("Comparing with theoretical free-particle models..."):
+                        errors = []
+                        models = ["1D", "2D", "3D"]
+
+                        for dim in [1, 2, 3]:
+                            E_ref, g_ref = numerical_dos_free_particles(dim, num_k_points=200_000)
+                            # Interpolate reference DOS onto user energies
+                            g_interp = np.interp(E_data, E_ref, g_ref, left=0, right=0)
+                            # Normalize both to same area for fair comparison
+                            g_interp /= np.trapezoid(g_interp, E_data)
+                            intensity_norm = intensity / np.trapezoid(intensity, E_data)
+                            mse = np.mean((intensity_norm - g_interp)**2)
+                            errors.append(mse)
+
+                        best_idx = int(np.argmin(errors))
+                        best_model = models[best_idx]
+                        best_error = errors[best_idx]
+
+                        col1, col2, col3 = st.columns(3)
+                        for i, (model, err) in enumerate(zip(models, errors)):
+                            with [col1, col2, col3][i]:
+                                delta = " Best match" if i == best_idx else ""
+                                st.metric(f"{model} Model Error", f"{err:.2e}", delta)
+
+                        st.success(f"**Best matching model: {best_model} free-particle gas**")
+
+                        # Optional: overlay best model
+                        if st.checkbox("Show best theoretical model on plot"):
+                            E_ref, g_ref = numerical_dos_free_particles(best_idx + 1, num_k_points=500_000)
+                            g_interp = np.interp(energies, E_ref, g_ref, left=0, right=0)
+                            g_interp /= np.trapezoid(g_interp, energies)
+                            dos_norm = dos / np.trapezoid(dos, energies)
+
+                            fig2, ax2 = plt.subplots()
+                            ax2.plot(energies, dos_norm, label="Your DOS (normalized)", lw=2)
+                            ax2.plot(energies, g_interp, '--', label=f"{best_model} Theoretical (normalized)", lw=2)
+                            ax2.legend()
+                            ax2.set_xlabel("Energy")
+                            ax2.set_ylabel("Normalized DOS")
+                            ax2.set_title("Comparison with Best Model")
+                            st.pyplot(fig2)
+
+    else:
+        st.info("Please upload a CSV file to begin.")
     
 page_names_to_funcs = {
     "Intro Page": intro,

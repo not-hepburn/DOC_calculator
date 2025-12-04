@@ -99,7 +99,7 @@ def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=50
         k_max = k_max
         E_max_est = (hbar**2 * k_max**2 / (2 * m_e)) / 1.602e-19
     
-    # Sample k-space UNIFORMLY (this is the key!)
+    # Sample k-space UNIFORMLY 
     if dimension == 1:
         k = np.random.uniform(-k_max, k_max, num_k_points)  # basically infinite
         k_weights = 2e8 / num_k_points  # dk per point (total length 2e8)
@@ -113,7 +113,7 @@ def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=50
         k_weights = (np.pi * (1e8)**2) / num_k_points  # d²k per point
     
     elif dimension == 3:
-        # Marsaglia method for uniform sphere sampling
+        # Marsaglia method for uniform 
         u = np.random.normal(0, 1, (3, num_k_points))
         norm = np.sqrt(np.sum(u**2, axis=0))
         k = u / norm[None,:] * (1e8 * np.cbrt(np.random.uniform(0, 1, num_k_points)))
@@ -123,7 +123,7 @@ def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=50
     k_squared = np.sum(k**2, axis=0) if dimension > 1 else k**2
     E = (hbar**2 * k_squared / (2 * mass)) / 1.602e-19  # Joules → eV
     
-    # Histogram with proper k-space volume weighting
+   
     hist, bin_edges = np.histogram(E, bins=energy_bins, range=(0, E_max_est), density=False)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
     dE = bin_edges[1] - bin_edges[0]
@@ -213,7 +213,70 @@ def compute_dos(model, dim, num_k, target_energy=None):
         return dos_1d_chain(num_k=num_k)
     
 
-def dos_from_user_data(E, bins=300):
-    hist, edges = np.histogram(E, bins=bins, density=True)
-    energies = 0.5*(edges[:-1] + edges[1:])
-    return energies, hist
+# Compute the DOS from the heat capacity...Not this 
+def dos_from_user_data(E, bins=500, spin_degeneracy=2, return_edges=False):
+    """
+    Compute the density of states g(ε) [states / (Ry · unit-cell)] 
+    for a free-electron gas from a list of sampled energies ε_i.
+    
+    Parameters
+    ----------
+    E : array_like
+        Single-particle energies (in the same units as the desired DOS,
+        typically Rydberg or Hartree).
+    bins : int or array_like, optional
+        Number of bins or explicit bin edges. Default = 500.
+    spin_degeneracy : int, optional
+        2 for spin-unpolarised electrons, 1 for spin-polarised. Default = 2.
+    return_edges : bool, optional
+        If True also return the bin edges.
+    
+    Returns
+    -------
+    ε_centers : ndarray
+        Centre of each energy bin.
+    g_of_ε   : ndarray
+        Density of states g(ε) in states / (energy · unit-cell).
+    bin_edges (optional)
+    """
+    E = np.asarray(E)
+    
+    # ------------------------------------------------------------
+    # 1. Determine the k-space volume per sampled k-point
+    # ------------------------------------------------------------
+    # The sampling is assumed to be uniform in a sphere of radius k_max
+    # such that the maximum energy in the sample is roughly \hbar^2k_max^2/2m.
+    # The total k-space volume of the sphere is V_k = (4\pi/3) k_max³
+    # With N_k points the volume per point is d^3k = V_k / N_k
+    N_k = len(E)
+    E_max = E.max()
+    
+    # k_max corresponding to E_max (free-electron dispersion)
+    k_max = np.sqrt(2 * E_max)               # units where \hbar^2/2m = 1
+    
+    V_k = (4.0 / 3.0) * np.pi * k_max**3      # total sampled k-volume
+    dk3_per_point = V_k / N_k                 # d^3k for every sampled k-point
+    
+    # ------------------------------------------------------------
+    # 2. Histogram the energies
+    # ------------------------------------------------------------
+    # We use density=False → raw counts in each bin
+    hist, bin_edges = np.histogram(E, bins=bins, range=(0, None))
+    
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+    dE = np.diff(bin_edges)                    # width of each bin (can be variable)
+    
+    # Avoid division by zero for empty bins at high energy
+    with np.errstate(invalid='ignore'):
+        dos = hist * dk3_per_point                  # states per bin
+        dos /= (2.0 * np.pi)**3                     # convert d^3k → d^3r = 1 (one unit cell)
+        dos *= spin_degeneracy                      # spin up + down
+        dos /= dE                                   # → states / energy per unit cell
+    
+    # Clean up NaNs that appear in empty high-energy bins
+    dos = np.nan_to_num(dos, nan=0.0)
+    
+    if return_edges:
+        return bin_centers, dos, bin_edges
+    else:
+        return bin_centers, dos
