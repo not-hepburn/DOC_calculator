@@ -8,3 +8,4 @@ numba
 tenpy.models
 tenpy
 dash
+plotly.graph_object
