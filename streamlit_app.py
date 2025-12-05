@@ -310,8 +310,6 @@ Below, we will make a cubique lattice, using the same process as we used for the
     st.info("To read more on Plotly: https://plotly.com/python/")
 
 
-
-
 def  dos_spectrum():
     import streamlit as st
     import time
@@ -394,11 +392,7 @@ def  dos_spectrum():
             fig.update_layout(height=450)
 
             st.plotly_chart(fig, use_container_width=True)
-
-    
-
-
-
+   
 
 def fast_dos():
     import streamlit as st
@@ -517,8 +511,7 @@ def fast_dos():
             fig.update_layout(height=450)
 
             st.plotly_chart(fig, use_container_width=True)
-                    
-        
+                           
 
 def user_data():
     import streamlit as st
@@ -536,18 +529,35 @@ def user_data():
 
 
     st.set_page_config(page_title="User DOS Analyzer", layout="centered")
-    st.title("Free-Particle Density of States from Experimental/Data Points")
+    st.title("Free-Particle Density of States from Experimental")
+    
+    st.warning("Unfinished Prototype")
+    st.markdown("""
+<div style="border: 1px solid #444; padding: 15px; border-radius: 8px; background-color: #151718;">
+     
+This feature is **experimental**.  
+I attempted to build a tool that visualizes the Density of States (DOS) for a user-provided energy spectrum.  
+It *almost* works… but not quite yet.
 
-    st.write("""
-    ***WARNING*** It is a protype.
-    I attempt to make a tool to visualize the DOS for a given energy input... and it does not work yet.
-    Since it was a curiosity thing, and the due date of the project is soon due. I will focus on other part.
-    Perhaps, I will work on it during the break.         
-    1. Tried a XXX until I notced it was not working
-    2. Then file issues...
-    Upload a CSV file containing at least an **Energy** column.  
-    Optionally include an **Intensity** column if you want to compare against theoretical free-particle models (1D/2D/3D).
-    """)
+Since the project deadline is approaching, I decided to prioritize other sections.  
+I may continue developing this tool during the break.
+
+**What currently happens:**
+1. I tried multiple approaches, but eventually noticed major issues in the routine.  
+2. There is a file-handling/plotting issue, the DOS is not displayed correctly yet.  
+   You’re welcome to try it, but just know: **it doesn’t work for now**.
+
+---
+
+### File Input (if you want to experiment)
+Upload a CSV containing at least an **`Energy`** column.  
+If you include an **`Intensity`** column, the app will attempt a comparison with theoretical DOS models (1D / 2D / 3D free particles).
+But ultimatly fail...
+
+</div>
+""", unsafe_allow_html=True)
+
+    
 
     # -----------------------------
     # 1. File Upload & Validation
