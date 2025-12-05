@@ -12,23 +12,33 @@ from Calculator_DOS_lib import (
 def intro():
     import streamlit as st
 
-    st.write("# Phys 459: Project")
-    st.sidebar.success("Select an option above.")
+    st.write("# PHYS 459 — Final Project")
+    st.sidebar.success("Select an option from the navigation panel.")
 
-    st.markdown(
-        """
-        This 'app' was made for the PHYS 459: Solid States Physics class autumn 2025.
-        As it is mentioned in the report send to the professor (hi Dr. Maiti!!).
+    st.markdown("""
+        Welcome to the **PHYS 459: Solid State Physics** project app  
+        (Autumn 2025).
 
-        In the dropdown on the left you will be able to:\\
-            1. Compute the Density of State (DOS) for a given energy.\\
-            2. Look at different DOS spectrum.\\
-            3. Input a csv file containing energies values to plot the spectrum with an overlay
-                of the expected spectrum.\\
-            4. Maybe I'll add some stuffs later. Like lattice!!!!
-        
-    """
-    )
+        This application accompanies the written report submitted to  
+        **Dr. Maiti** *(hi again!)* and provides interactive tools to explore
+        some concepts discussed in the course.
+
+        ### What you can do here
+        **1. Compute the Density of States (DOS)** for different models  
+        **2. Visualize DOS spectrum** using Monte-Carlo sampling  
+        **3. Upload your own CSV file** to generate a DOS from real or simulated data  
+        **4. Python tutorial** on drawing lattices (square, honeycomb, 3D…)  
+        **5. Possibly more features later** if I remember or if there is also a similar project in Condense Matter... 
+    
+
+        Cheers! 
+
+        *Unsolicited acknowledgement:* Due to my brother who made this simple comment on how making a python calculator for DOS was, to quote him.
+        "too simple" this project took a turn and becam this short and simple app. Which is statement for all the enginers over there.
+
+        *That was my TED Talk*    
+        """)
+
 
 def tutorial():
     import streamlit as st
