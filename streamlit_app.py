@@ -34,8 +34,7 @@ def intro():
         Cheers! 
 
         *Unsolicited acknowledgement:* Due to my brother who made this simple comment on how making a python calculator for DOS was, to quote him.
-        "too simple" this project took a turn and becam this short and simple app. Which is statement for all the enginers over there.
-
+        "too simple" this project took a turn and becam this short and simple app.... 
         *That was my TED Talk*    
         """)
 
@@ -396,7 +395,6 @@ def  dos_spectrum():
                     st.error(f"Analytical DOS failed: {err}")
                     gE_analytic = None
 
-                # New figure so we don't overwrite previous px.fig
                 fig2 = go.Figure()
 
                 # Numerical DOS
@@ -408,7 +406,7 @@ def  dos_spectrum():
                     line=dict(width=2)
                 ))
 
-                # Analytical DOS overlay
+                # Analytical DOS
                 if gE_analytic is not None:
                     fig2.add_trace(go.Scatter(
                         x=E,
@@ -447,7 +445,7 @@ def fast_dos():
 
     st.markdown("---")
 
-    # --- INPUT PANEL ---
+   
     st.subheader("Configuration")
 
     model = st.pills(
@@ -503,7 +501,7 @@ def fast_dos():
                 corr_dos = None
 
         
-        # --- RESULT CARD ---
+        
         st.subheader("Result")
 
         if corr_dos is None:
@@ -593,11 +591,6 @@ But ultimatly fail...
 </div>
 """, unsafe_allow_html=True)
 
-    
-
-    # -
-    # 1. File Upload & Validation
-    # -
     with st.container(border=True):
         st.subheader("Upload CSV File")
         uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
@@ -645,9 +638,6 @@ But ultimatly fail...
 
     st.markdown("---")
 
-    # -
-    # 2. Configuration
-    # -
     if df is not None:
         col_left, col_right = st.columns([1, 1])
 
@@ -679,9 +669,7 @@ But ultimatly fail...
 
         st.markdown("---")
         st.write(bins)
-        # -
-        # 3. Compute DOS Button
-        # -
+    
         if st.button("Compute Density of States", type="primary"):
         
             if df is None or energy_col is None :
@@ -715,10 +703,6 @@ But ultimatly fail...
                 except Exception as e:
                     st.error(f"Error computing DOS: {e}")
                     st.stop()
-
-            # -
-            # 4. Display Results
-            # -
             st.success("Density of States computed successfully!")
 
             # Plot
@@ -774,7 +758,7 @@ But ultimatly fail...
 
                         st.success(f"**Best matching model: {best_model} free-particle gas**")
 
-                        # Optional: overlay best model
+                
                         if st.checkbox("Show best theoretical model on plot"):
                             E_ref, g_ref = numerical_dos_free_particles(best_idx + 1, num_k_points=500_000)
                             g_interp = np.interp(energies, E_ref, g_ref, left=0, right=0)
