@@ -9,12 +9,11 @@ def dos_spin(spin):
 def analytic_free_dos(dim, E):
     E = np.asarray(E, dtype=float)
     dos = np.zeros_like(E)
-    alpha = dim / 2.0 - 1.0  # 1D: -1/2, 2D: 0, 3D: 1/2
+    alpha = dim / 2.0 - 1.0
 
     mask = E > 0
     dos[mask] = E[mask] ** alpha
 
-    # normalize to area 1 for shape comparison
     area = np.trapezoid(dos[mask], E[mask]) if np.any(mask) else 0.0
     if area > 0:
         dos /= area
@@ -98,7 +97,7 @@ class DOS:
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.constants import hbar, electron_mass as m_e, proton_mass as m_p
-plt.style.use('dark_background')  # because we're not animals
+plt.style.use('dark_background')  
 
 
 def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=500, 
@@ -117,18 +116,18 @@ def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=50
     
     # Sample k-space UNIFORMLY 
     if dimension == 1:
-        k = np.random.uniform(-k_max, k_max, num_k_points)  # basically infinite
+        k = np.random.uniform(-k_max, k_max, num_k_points) 
         k_weights = 2e8 / num_k_points  # dk per point (total length 2e8)
     
     elif dimension == 2:
         theta = np.random.uniform(0, 2*np.pi, num_k_points)
         r = k_max * np.random.uniform(0,1) ** (1/3)
 
-        r = 1e8 * np.sqrt(np.random.uniform(0, 1, num_k_points))  # uniform in area
+        r = 1e8 * np.sqrt(np.random.uniform(0, 1, num_k_points))
         kx = r * np.cos(theta)
         ky = r * np.sin(theta)
         k = np.stack([kx, ky])
-        k_weights = (np.pi * (1e8)**2) / num_k_points  # d²k per point
+        k_weights = (np.pi * (1e8)**2) / num_k_points  
     
     elif dimension == 3:
         # Marsaglia method for uniform 
@@ -137,17 +136,15 @@ def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=50
         k = u / norm[None,:] * (1e8 * np.cbrt(np.random.uniform(0, 1, num_k_points)))
         k_weights = (4/3 * np.pi * (1e8)**3) / num_k_points  # d³k per point
     
-    # Energy: E = ħ²k²/2m  (for electrons) — convert to eV
+    
     k_squared = np.sum(k**2, axis=0) if dimension > 1 else k**2
-    E = (hbar**2 * k_squared / (2 * mass)) / 1.602e-19  # Joules → eV
+    E = (hbar**2 * k_squared / (2 * mass)) / 1.602e-19  
     
    
     hist, bin_edges = np.histogram(E, bins=energy_bins)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
     dE = np.diff(bin_edges)
     
-    # Each k-point contributes:  g(E) dE = (number of states in dE) = sum (dk_volume / (2π)^d )
-    # We sampled uniformly, so total DOS = hist * k_weights / (2π)^d / dE
     dos = hist * k_weights / ((2 * np.pi)**dimension) / dE
     
     if spin is not None:
@@ -159,7 +156,7 @@ def dos_1d_chain(num_k=100_000, energy_bins=500):
     E = -2 * np.cos(k)  # tight-binding E = -2t cos(ka), t=1
     hist, edges = np.histogram(E, bins=energy_bins, range=(-4,4), density=True)
     centers = (edges[:-1] + edges[1:])/2
-    dos = hist * (2*np.pi)  # because dk integration -----  multiply by Brillouin zone length
+    dos = hist * (2*np.pi) 
     return centers, dos
 
 def dos_2d_square_lattice(num_k=500_000, energy_bins=600):
@@ -173,10 +170,10 @@ def dos_2d_square_lattice(num_k=500_000, energy_bins=600):
 
 def dos_1d_phonons(num_k=100_000, energy_bins=400):
     k = np.linspace(-np.pi, np.pi, num_k)
-    omega = 2 * np.abs(np.sin(k/2))  # 1D phonon dispersion ω = 2√(K/m)|sin(ka/2)|
+    omega = 2 * np.abs(np.sin(k/2))  
     hist, edges = np.histogram(omega, bins=energy_bins, range=(0,2), density=True)
     centers = (edges[:-1] + edges[1:])/2
-    dos = hist * (2*np.pi)  # same logic
+    dos = hist * (2*np.pi)  
     return centers, dos
 
 
@@ -236,56 +233,24 @@ def dos_from_user_data_2(E, bins=200):
     if len(E) == 0:
         raise ValueError("No valid energies.")
 
-    # Histogram → counts per bin
+    
     hist, edges = np.histogram(E, bins=bins)
     centers = 0.5 * (edges[:-1] + edges[1:])
     dE = np.diff(edges)
-
-    # DOS ~ dN/dE
     dos = hist / dE
 
-    # Normalize shape only (area = 1), since you only care about shape
-    area = np.trapz(dos, centers)
+    area = np.trapezoid(dos, centers)
     if area > 0:
         dos /= area
 
     return centers, dos
 
-# Compute the DOS from the heat capacity...Not this 
-def dos_from_user_data(E, bins=500, spin_degeneracy=2, return_edges=False):
     """
-    Compute the density of states g(ε) [states / (Ry · unit-cell)] 
-    for a free-electron gas from a list of sampled energies ε_i.
-    
-    Parameters
-    ----------
-    E : array_like
-        Single-particle energies (in the same units as the desired DOS,
-        typically Rydberg or Hartree).
-    bins : int or array_like, optional
-        Number of bins or explicit bin edges. Default = 500.
-    spin_degeneracy : int, optional
-        2 for spin-unpolarised electrons, 1 for spin-polarised. Default = 2.
-    return_edges : bool, optional
-        If True also return the bin edges.
-    
-    Returns
-    -------
-    ε_centers : ndarray
-        Centre of each energy bin.
-    g_of_ε   : ndarray
-        Density of states g(ε) in states / (energy · unit-cell).
-    bin_edges (optional)
+    Ugh
     """
     E = np.asarray(E)
     
-    # ------------------------------------------------------------
-    # 1. Determine the k-space volume per sampled k-point
-    # ------------------------------------------------------------
-    # The sampling is assumed to be uniform in a sphere of radius k_max
-    # such that the maximum energy in the sample is roughly \hbar^2k_max^2/2m.
-    # The total k-space volume of the sphere is V_k = (4\pi/3) k_max³
-    # With N_k points the volume per point is d^3k = V_k / N_k
+    
     N_k = len(E)
     E_max = E.max()
     

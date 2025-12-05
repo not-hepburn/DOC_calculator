@@ -334,7 +334,7 @@ def  dos_spectrum():
 
     dim = st.selectbox("Dimension", [1,2,3]) if model == "Free electrons" else None
 
-    Nk = st.slider("Number of k-points", 1_000, 30_000_000, 50_000)
+    Nk = st.slider("Number of k-points", 1_000, 500_000, 1_000)
 
 
     if st.button("Compute DOS"):
@@ -374,24 +374,50 @@ def  dos_spectrum():
         st.download_button( "Download DOS data as CSV", csv, "dos_data.csv", "text/csv")
         from Calculator_DOS_lib import analytic_free_dos
 
-        ext = st.expander("View Analytical Spectrum") if model =='Free Electrons' else None
-        with ext:
-            import plotly.express as px
-            idx = np.searchsorted(E, target_energy)
-            lo = max(idx-200,0)
-            hi = min(idx + 200, len(E))
-            df = pd.DataFrame({"Energy": E, "DOS": gE})
-            scale = 1e-12
-            df["DOS_scaled"] = df["DOS"] * scale
+        ext = st.expander("View Analytical Spectrum") if model == "Free electrons" else None
 
-            fig = px.line(
-                df, x="Energy", y="DOS_scaled",
-                title=f"{model} – DOS Spectrum",
-                labels={"DOS_scaled": f"DOS × {1/scale:.0e}", "Energy": "Energy (eV)"},
-            )
-            fig.update_layout(height=450)
+        if ext is not None:
+            with ext:
+                import plotly.graph_objects as go
 
-            st.plotly_chart(fig, use_container_width=True)
+                try:
+                    gE_analytic = analytic_free_dos(dim, E)
+                except Exception as err:
+                    st.error(f"Analytical DOS failed: {err}")
+                    gE_analytic = None
+
+                # New figure so we don't overwrite previous px.fig
+                fig2 = go.Figure()
+
+                # Numerical DOS
+                fig2.add_trace(go.Scatter(
+                    x=E,
+                    y=gE,
+                    mode="lines",
+                    name="Numerical DOS",
+                    line=dict(width=2)
+                ))
+
+                # Analytical DOS overlay
+                if gE_analytic is not None:
+                    fig2.add_trace(go.Scatter(
+                        x=E,
+                        y=gE_analytic,
+                        mode="lines",
+                        name="Analytical DOS",
+                        line=dict(width=2, dash="dash")
+                    ))
+
+                fig2.update_layout(
+                    title="Numerical vs Analytical DOS",
+                    xaxis_title="Energy (eV)",
+                    yaxis_title="DOS g(E)",
+                    height=450,
+                    template="plotly_dark"
+                )
+
+                st.plotly_chart(fig2, use_container_width=True)
+
    
 
 def fast_dos():
