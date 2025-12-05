@@ -348,7 +348,7 @@ def  dos_spectrum():
 
 
     if st.button("Compute DOS"):
-        # ---- Compute model ----
+        #  Compute model 
         if model == "Free electrons":
             with st.spinner("Computing DOS..."):
                 E, gE = numerical_dos_free_particles(dim, num_k_points=Nk)
@@ -443,11 +443,11 @@ def fast_dos():
     )
 
     st.title("Density of States Calculator")
-    st.caption("A minimal, fast DOS calculator for PHYS 459.")
+    st.caption("Fast DOS calculator for PHYS 459.")
 
     st.markdown("---")
 
-    # ------- INPUT PANEL -------
+    # --- INPUT PANEL ---
     st.subheader("Configuration")
 
     model = st.pills(
@@ -486,7 +486,7 @@ def fast_dos():
     if compute:
         with st.spinner("Fetching the corresponding bits... be right back"):
             
-            # ---- Compute model ----
+            #  Compute model 
             if model == "Free electrons":
                 E, gE = numerical_dos_free_particles(dim, num_k_points=Nk)
             elif model == "1D chain":
@@ -496,14 +496,14 @@ def fast_dos():
             else:
                 E, gE = dos_1d_phonons(Nk)
 
-            # ---- Interpolate result ----
+            # Interpolate result 
             try:
                 corr_dos = np.interp(target_energy, E, gE)
             except Exception:
                 corr_dos = None
 
         
-        # ------- RESULT CARD -------
+        # --- RESULT CARD ---
         st.subheader("Result")
 
         if corr_dos is None:
@@ -558,7 +558,7 @@ def user_data():
     import matplotlib.pyplot as plt
     
 
-    from Calculator_DOS_lib import (dos_from_user_data, numerical_dos_free_particles,
+    from Calculator_DOS_lib import (numerical_dos_free_particles,
         dos_1d_chain,
         dos_2d_square_lattice,
         dos_1d_phonons, dos_from_user_data_2)
@@ -595,9 +595,9 @@ But ultimatly fail...
 
     
 
-    # -----------------------------
+    # -
     # 1. File Upload & Validation
-    # -----------------------------
+    # -
     with st.container(border=True):
         st.subheader("Upload CSV File")
         uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
@@ -645,9 +645,9 @@ But ultimatly fail...
 
     st.markdown("---")
 
-    # -----------------------------
+    # -
     # 2. Configuration
-    # -----------------------------
+    # -
     if df is not None:
         col_left, col_right = st.columns([1, 1])
 
@@ -679,9 +679,9 @@ But ultimatly fail...
 
         st.markdown("---")
         st.write(bins)
-        # -----------------------------
+        # -
         # 3. Compute DOS Button
-        # -----------------------------
+        # -
         if st.button("Compute Density of States", type="primary"):
         
             if df is None or energy_col is None :
@@ -716,9 +716,9 @@ But ultimatly fail...
                     st.error(f"Error computing DOS: {e}")
                     st.stop()
 
-            # -----------------------------
+            # -
             # 4. Display Results
-            # -----------------------------
+            # -
             st.success("Density of States computed successfully!")
 
             # Plot
@@ -739,9 +739,8 @@ But ultimatly fail...
                 mime="text/csv"
             )
 
-            # -----------------------------
+        
             # 5. Model Comparison (1D/2D/3D free particles)
-            # -----------------------------
             if intensity_col is not None:
                 st.markdown("### Model Comparison (1D / 2D / 3D Free Particles)")
 

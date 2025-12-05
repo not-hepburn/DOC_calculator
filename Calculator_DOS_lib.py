@@ -130,7 +130,6 @@ def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=50
         k_weights = (np.pi * (1e8)**2) / num_k_points  
     
     elif dimension == 3:
-        # Marsaglia method for uniform 
         u = np.random.normal(0, 1, (3, num_k_points))
         norm = np.sqrt(np.sum(u**2, axis=0))
         k = u / norm[None,:] * (1e8 * np.cbrt(np.random.uniform(0, 1, num_k_points)))
