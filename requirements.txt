@@ -7,4 +7,3 @@ scipy
 numba
 physics-tenpy
 dash
-plotly.graph_object
