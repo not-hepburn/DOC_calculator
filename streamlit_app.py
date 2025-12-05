@@ -198,7 +198,7 @@ plt.show()
 
     st.info("Link: https://tenpy.readthedocs.io/en/latest/index.html")
 
-    with st.expander("📘 What are sites, basis atoms, and Bravais lattices?"):
+    with st.expander(" Small background on sites, basis atoms, and Bravais lattices."):
         
         st.markdown("""
     ### **Bravais Lattice**
