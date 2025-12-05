@@ -30,9 +30,286 @@ def intro():
     """
     )
 
-def background():
+def tutorial():
     import streamlit as st
-    st.markdown("Add some stuffs to explain DOS")
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    st.markdown("""
+    # Lattice Plotting Tutorial
+    
+    This short tutorial shows how to draw lattices using Python.
+    """)
+
+    st.markdown("## 1. Importing the libraries")
+    lib = '''import matplotlib.pyplot as plt
+    import numpy as np '''
+    st.code(lib, "python")
+
+
+    st.write("""
+`matplotlib.pyplot` is used for creating figures and plots.  
+`numpy` provides tools, like on to generate grids.
+    """)
+
+    st.markdown("## 2. Creating a 2D Square Lattice with `meshgrid`")
+
+    st.write("""
+`np.meshgrid` takes two 1D arrays and produces coordinate matrices.  
+Here we generate a 10×10 square lattice.
+    """)
+
+    st.code("""
+x, y = np.meshgrid(np.arange(0, 10, 1), np.arange(0, 10, 1))
+    """, language="python")
+
+    st.write("""
+With `np.arange` we create an array that starts at 0, ends at 10, and with steps of 1.
+
+Therefore, if you have a particular lattice constant size, you can change the value of the steps to fit the given lattice constant. """)
+    x, y = np.meshgrid(np.arange(0, 10, 1), np.arange(0, 10, 1))
+
+    fig1 = plt.figure(figsize=(6, 6))
+    plt.scatter(x, y, s=150, c="blue", edgecolors="black")
+    plt.grid(True, linestyle="--", alpha=0.4)
+    plt.title("Square Lattice (10×10)")
+    st.pyplot(fig1)
+
+    st.markdown("""
+The parameters used:
+
+- `s`: size of each lattice point  
+- `c`: color  
+- `edgecolors`: border color  
+- `grid(True)`: displays a background grid  
+    """)
+
+    st.markdown("## 3. Square Lattice with Two Atoms per Unit Cell")
+
+    st.write("""
+You can create two atom lattices by plotting two sets of points with different colors.
+    """)
+
+    st.code("""
+x1, y1 = np.meshgrid(np.arange(0, 5, 1), np.arange(0, 5, 1))
+x2, y2 = np.meshgrid(np.arange(0, 5, 1) + 0.5, np.arange(0, 5, 1) + 0.5)
+# Note: The +5 acts like the b in this basic line function: y = ax + b
+
+plt.scatter(x1, y1, c="blue", edgecolor="black", label="Atom A")
+plt.scatter(x2, y2, c="white", edgecolor="black", label="Atom B")
+plt.legend()
+plt.grid(True, linestyle="--", alpha=0.4)
+plt.title("Two-Atom Square Lattice")
+plt.show()
+    """, language="python")
+
+    x1, y1 = np.meshgrid(np.arange(0, 5, 1), np.arange(0, 5, 1))
+    x2, y2 = np.meshgrid(np.arange(0, 5, 1) + 0.5, np.arange(0, 5, 1) + 0.5)
+
+    fig2 = plt.figure(figsize=(6, 6))
+    plt.scatter(x1, y1, c="blue", edgecolor="black", label="Atom A")
+    plt.scatter(x2, y2, c="white", edgecolor="black", label="Atom B")
+    plt.grid(True, linestyle="--", alpha=0.4)
+    plt.title("Two-Atom Square Lattice")
+    plt.legend()
+    st.pyplot(fig2)
+
+    st.success("You have now created 2D lattices in Python!")
+    st.markdown("### 3.1 Honeycomb Lattice with `TenPy`")
+    st.write("""
+        The honeycomb lattice can be constructed using the same tools as the sections above,  
+        but there is also a dedicated physics library called **TenPy** (`tenpy.models.lattice`)  
+        that makes generating common lattices extremely simple.
+
+        TenPy provides ready-made lattice classes such as:
+
+        1. **Chain Lattice**  
+        2. **Honeycomb Lattice**  
+        3. **Triangular Lattice**  
+        4. And many more (square, kagome, brickwall, etc.)
+
+        It is very beginner-friendly!
+
+        To use TenPy, install the module in your environment:
+        """)
+
+    st.code("pip install physics-tenpy", language="bash")
+
+    st.markdown("""
+    Once TenPy is installed, we can import the required modules.  
+    We will also need `SciPy` and `Matplotlib` for plotting and numerical tools:
+    """)
+
+    st.code("""
+    import tenpy
+    from tenpy.models import lattice
+    import scipy
+    import matplotlib.pyplot as plt
+    """, language="python")
+
+    st.markdown("""
+    Now we only need to specify the lattice dimensions in the x and y direction.  
+    `TenPy` takes care of everything else (the geometry, basis atoms, and plotting).
+    """)
+
+    st.code("""
+lat = lattice.Honeycomb(Lx=2, Ly=3, sites=None, bc='periodic')
+# Sites can be an array of specific sites of the lattice
+# bc corresponds to the boundary condition and here it is a periodic list of interger.
+
+fig_latt = plt.figure(figsize=(6, 6))
+ax = plt.gca()
+
+lat.plot_sites(ax)  # draw lattice sites
+lat.plot_basis(ax, origin=0.5 * (lat.basis[0] + lat.basis[1]))  # draw basis atoms
+
+ax.set_aspect('equal')
+ax.set_title("Honeycomb Lattice (TenPy)")
+ax.grid(True, linestyle='--', alpha=0.3)
+plt.show()
+""", language="python")
+    
+    import tenpy
+    from tenpy.models import lattice
+    
+    lat = lattice.Honeycomb(Lx=2, Ly=3, sites=None, bc='periodic')
+
+    fig_latt = plt.figure(figsize=(6, 6))
+    ax = plt.gca()
+
+    lat.plot_sites(ax)  # draw lattice sites
+    lat.plot_basis(ax, origin=0.3 * (lat.basis[0] + lat.basis[1]))  # draw basis atoms
+
+    ax.set_aspect('equal')
+    ax.set_title("Honeycomb Lattice (TenPy)")
+    ax.grid(True, linestyle='--', alpha=0.3)
+
+    st.pyplot(fig_latt, width="content")
+
+    st.success("""
+    You now have a full **honeycomb lattice**:  
+    the **basis vectors** (shown in green) and the **lattice sites** (shaded in the plot)!
+    """)
+
+    st.markdown("""
+    For more details on available lattice types, plotting tools, and advanced features,  
+    you can explore the official TenPy documentation below:
+    """)
+
+    st.info("Link: https://tenpy.readthedocs.io/en/latest/index.html")
+
+    with st.expander("📘 What are sites, basis atoms, and Bravais lattices?"):
+        
+        st.markdown("""
+    ### **Bravais Lattice**
+"A Bravais lattice is an infinite arrangement of points (or atoms) in space that has the following property:
+The lattice looks exactly the same when viewed from any lattice point." https://courses.cit.cornell.edu/mse5470/handout4.pdf
+
+In short, it describes the repeating geometry of the lattice.
+
+    """)
+        st.divider()
+        st.markdown("""
+### Unit Cell
+The smallest repeating pattern in the lattice. Defined by the primitive vectors:""")
+        st.latex("\\vec{a}_1, \\vec{a}_2, \\vec{a}_3")
+        st.divider()
+        st.markdown(""" 
+### **Basis**
+The basis is the set of atoms who can span to every lattice point. It is the mathematical definition of a basis in linear algebra. """)
+        st.divider()
+        st.markdown("""
+### **Sites**
+A *site* is the position where an atom is.""")
+        st.divider()
+        st.markdown("""
+### **Why the Honeycomb is NOT a Bravais lattice**
+A honeycomb appears hexagonal, but its true structure is:
+- a **triangular Bravais lattice**,  
+- with a **two-atom basis**.
+
+TenPy handles this automatically by defining:
+- the Bravais lattice vectors  
+- the basis atom positions  
+- and plotting conventions.
+
+This is why the library is extremely useful to know!!
+    """)
+        st.info("Source:")
+
+    st.markdown("## 4. 3D Lattices")
+
+    st.write("""To make 3D lattices, we can use the same basics steps as mentionned above. We just need a new module that will allow us to visualize our lattices in 3D.
+And we can use `Plotly`, an interactive plotting library, for that.
+
+Plotly allows us to rotate, zoom, and explore 3D figures directly inside the browser, which is ideal for a fast way to visualize more complex structures.
+             
+Below, we will make a cubique lattice, using the same process as we used for the square lattice.""")
+    
+    st.code("""
+        import plotly.graph_objects as go
+        import numpy as np
+
+        # Make our mesh grid for each dimension
+        x, y, z = np.meshgrid(np.arange(0, 6, 1),np.arange(0, 6, 1),np.arange(0, 6, 1))
+    
+        # IMPORTANT: We need to flatten the arrays
+        # because Plotly does not take arrays
+        x = x.flatten()
+        y = y.flatten()
+        z = z.flatten()
+        '''
+        e.g of flatten()
+        x = [1 , 2]
+            [3, 4]
+        x.flatten() = [1, 2, 3, 4]
+        '''
+
+        # Make the 3D figure
+        fig = go.Figure(data=[go.Scatter3d(
+            x=x, y=y, z=z,
+            mode='markers',
+            marker=dict(size=5, color=z, colorscale='Viridis')
+        )])
+
+        fig.update_layout(
+            title="3D Scatter Plot Example",
+            scene=dict(
+                xaxis_title="X",
+                yaxis_title="Y",
+                zaxis_title="Z"
+            )
+        )
+
+        fig.show()
+        """, language="python")
+    import plotly.graph_objects as go
+
+    x, y, z = np.meshgrid(np.arange(0, 6, 1),np.arange(0, 6, 1),np.arange(0, 6, 1))
+    x = x.flatten()
+    y = y.flatten()
+    z = z.flatten()
+
+    fig_3d = go.Figure(data=[go.Scatter3d(
+        x=x, y=y, z=z,
+        mode='markers',
+        marker=dict(size=5, color=z, colorscale='Viridis')
+    )])
+
+    fig_3d.update_layout(
+        title="3D Scatter Plot Example",
+        scene=dict(
+            xaxis_title="X",
+            yaxis_title="Y",
+            zaxis_title="Z"
+        )
+    )
+
+    st.plotly_chart(fig_3d, use_container_width=True)
+    st.success("And you made a Cube Lattice!")
+    st.info("To read more on Plotly: https://plotly.com/python/")
+
+
 
 
 def  dos_spectrum():
@@ -97,6 +374,28 @@ def  dos_spectrum():
 
         csv = df.to_csv(index=False).encode()
         st.download_button( "Download DOS data as CSV", csv, "dos_data.csv", "text/csv")
+        from Calculator_DOS_lib import analytic_free_dos
+
+        ext = st.expander("View Analytical Spectrum") if model =='Free Electrons' else None
+        with ext:
+            import plotly.express as px
+            idx = np.searchsorted(E, target_energy)
+            lo = max(idx-200,0)
+            hi = min(idx + 200, len(E))
+            df = pd.DataFrame({"Energy": E, "DOS": gE})
+            scale = 1e-12
+            df["DOS_scaled"] = df["DOS"] * scale
+
+            fig = px.line(
+                df, x="Energy", y="DOS_scaled",
+                title=f"{model} – DOS Spectrum",
+                labels={"DOS_scaled": f"DOS × {1/scale:.0e}", "Energy": "Energy (eV)"},
+            )
+            fig.update_layout(height=450)
+
+            st.plotly_chart(fig, use_container_width=True)
+
+    
 
 
 
@@ -200,7 +499,7 @@ def fast_dos():
                 unsafe_allow_html=True
             )
 
-        # ------- OPTIONAL PLOT -------
+    
         with st.expander("View DOS spectrum plot"):
             import plotly.express as px
             idx = np.searchsorted(E, target_energy)
@@ -233,13 +532,19 @@ def user_data():
     from Calculator_DOS_lib import (dos_from_user_data, numerical_dos_free_particles,
         dos_1d_chain,
         dos_2d_square_lattice,
-        dos_1d_phonons)
+        dos_1d_phonons, dos_from_user_data_2)
 
 
     st.set_page_config(page_title="User DOS Analyzer", layout="centered")
     st.title("Free-Particle Density of States from Experimental/Data Points")
 
     st.write("""
+    ***WARNING*** It is a protype.
+    I attempt to make a tool to visualize the DOS for a given energy input... and it does not work yet.
+    Since it was a curiosity thing, and the due date of the project is soon due. I will focus on other part.
+    Perhaps, I will work on it during the break.         
+    1. Tried a XXX until I notced it was not working
+    2. Then file issues...
     Upload a CSV file containing at least an **Energy** column.  
     Optionally include an **Intensity** column if you want to compare against theoretical free-particle models (1D/2D/3D).
     """)
@@ -360,7 +665,7 @@ def user_data():
                         st.error("Energy column contains no numeric data.")
                         st.stop()
 
-                    energies, dos = dos_from_user_data(E_data, bins=bins, spin_degeneracy=2)
+                    energies, dos = dos_from_user_data_2(E_data, bins=bins)
                 except Exception as e:
                     st.error(f"Error computing DOS: {e}")
                     st.stop()
@@ -373,7 +678,7 @@ def user_data():
             # Plot
             fig, ax = plt.subplots(figsize=(8, 5))
             ax.plot(energies, dos, color="#1f77b4", lw=2)
-            ax.set_xlabel("Energy (a.u.)")
+            ax.set_xlabel("Energy")
             ax.set_ylabel("DOS (states / energy / unit cell)")
             ax.set_title("Computed Density of States")
             ax.grid(True, alpha=0.3)
@@ -445,7 +750,7 @@ def user_data():
     
 page_names_to_funcs = {
     "Intro Page": intro,
-    "Notes on DOS": background,
+    "Python tutorial": tutorial,
     "Spectrum DOS": dos_spectrum,
     "DOS Calulator": fast_dos,
     "Data Analyser": user_data

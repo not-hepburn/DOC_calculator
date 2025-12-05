@@ -6,6 +6,21 @@ import pandas as pd
 def dos_spin(spin):
     return 2*spin +1
 
+def analytic_free_dos(dim, E):
+    E = np.asarray(E, dtype=float)
+    dos = np.zeros_like(E)
+    alpha = dim / 2.0 - 1.0  # 1D: -1/2, 2D: 0, 3D: 1/2
+
+    mask = E > 0
+    dos[mask] = E[mask] ** alpha
+
+    # normalize to area 1 for shape comparison
+    area = np.trapezoid(dos[mask], E[mask]) if np.any(mask) else 0.0
+    if area > 0:
+        dos /= area
+
+    return dos
+
 def energy (mass, k, dimension = 1):
     if dimension not in [1, 2, 3]:
         raise ValueError("Dimension must be 1, 2, or 3.")
@@ -107,6 +122,8 @@ def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=50
     
     elif dimension == 2:
         theta = np.random.uniform(0, 2*np.pi, num_k_points)
+        r = k_max * np.random.uniform(0,1) ** (1/3)
+
         r = 1e8 * np.sqrt(np.random.uniform(0, 1, num_k_points))  # uniform in area
         kx = r * np.cos(theta)
         ky = r * np.sin(theta)
@@ -125,9 +142,9 @@ def numerical_dos_free_particles(dimension, num_k_points=400_000, energy_bins=50
     E = (hbar**2 * k_squared / (2 * mass)) / 1.602e-19  # Joules → eV
     
    
-    hist, bin_edges = np.histogram(E, bins=energy_bins, range=(0, E_max_est), density=False)
+    hist, bin_edges = np.histogram(E, bins=energy_bins)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    dE = bin_edges[1] - bin_edges[0]
+    dE = np.diff(bin_edges)
     
     # Each k-point contributes:  g(E) dE = (number of states in dE) = sum (dk_volume / (2π)^d )
     # We sampled uniformly, so total DOS = hist * k_weights / (2π)^d / dE
@@ -213,6 +230,26 @@ def compute_dos(model, dim, num_k, target_energy=None):
     elif model == '1D Chain':
         return dos_1d_chain(num_k=num_k)
     
+def dos_from_user_data_2(E, bins=200):
+    E = np.asarray(E, dtype=float)
+    E = E[np.isfinite(E)]
+    if len(E) == 0:
+        raise ValueError("No valid energies.")
+
+    # Histogram → counts per bin
+    hist, edges = np.histogram(E, bins=bins)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    dE = np.diff(edges)
+
+    # DOS ~ dN/dE
+    dos = hist / dE
+
+    # Normalize shape only (area = 1), since you only care about shape
+    area = np.trapz(dos, centers)
+    if area > 0:
+        dos /= area
+
+    return centers, dos
 
 # Compute the DOS from the heat capacity...Not this 
 def dos_from_user_data(E, bins=500, spin_degeneracy=2, return_edges=False):
